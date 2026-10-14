@@ -1,0 +1,25 @@
+{
+    "source_revision":  "c31dfefc8bb3eda353276e7ddbe34774412eb933",
+    "retained_case":  "entry_momentum_legal_5bps",
+    "copied_files":  {
+                         "stock_strategy/indicator.py":  "7e7264e0a0541a66f448106512bd6bbe3f705210fb0a7fbe0f47b88535270c22",
+                         "stock_strategy/risk.py":  "15eff55196ab0e4952bfb05b6d4614808b849bbc4d1f5042c39db3f194ce7761",
+                         "stock_strategy/selection.py":  "66ffdee97180ac94125930fdacd8a5336f88885254e95ff406cc64750d0d88a6",
+                         "stock_strategy/config.py":  "3d6af46e6d0ee23fe4891c666575f5ffdc1e2f88e2a0e591b1be9162ef593258",
+                         "stock_strategy/research_parameters.json":  "f207f6057a7ec1a6181fe256e016b39c32f78c5a3e687f7bfb0427d2f6fe267e",
+                         "stock_strategy/planner.py":  "875f93a8beb5847e01bb5ca2bd2102b31b0601cf16bc9433b3a46af0fbb64e49"
+                     },
+    "extracted_functions":  {
+                                "stock_strategy/candles.py":  "four_hour_events from data.py; unchanged function body",
+                                "stock_strategy/allocation.py":  "execute from execution.py; unchanged function body"
+                            },
+    "normalization":  "CRLF to LF only; source file/function logic and parameters unchanged",
+    "original_source_sha256":  {
+                                   "stock_strategy/indicator.py":  "7e7264e0a0541a66f448106512bd6bbe3f705210fb0a7fbe0f47b88535270c22",
+                                   "stock_strategy/risk.py":  "15eff55196ab0e4952bfb05b6d4614808b849bbc4d1f5042c39db3f194ce7761",
+                                   "stock_strategy/selection.py":  "66ffdee97180ac94125930fdacd8a5336f88885254e95ff406cc64750d0d88a6",
+                                   "stock_strategy/planner.py":  "875f93a8beb5847e01bb5ca2bd2102b31b0601cf16bc9433b3a46af0fbb64e49",
+                                   "stock_strategy/research_parameters.json":  "f207f6057a7ec1a6181fe256e016b39c32f78c5a3e687f7bfb0427d2f6fe267e",
+                                   "stock_strategy/config.py":  "3d6af46e6d0ee23fe4891c666575f5ffdc1e2f88e2a0e591b1be9162ef593258"
+                               }
+}
