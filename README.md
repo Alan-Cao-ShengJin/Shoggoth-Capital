@@ -18,15 +18,17 @@ places orders. This is research, not financial advice.
 
 ```
 README.md            this page
-requirements.txt     shared Python requirements (timezone data)
+.gitignore           repo-wide: caches, credentials, downloaded data and outputs
+.gitattributes       repo-wide: LF line endings everywhere
 .github/workflows/   runs every strategy's tests on Windows and Linux
 strategies/
-  mve/               MVE: code, tests, synthetic demo, source manifest, notice
-  episodic_pivot/    EP: code, tests, Massive.com data source
+  mve/               MVE: code, tests, synthetic demo, source manifest, notice, requirements
+  episodic_pivot/    EP: code, tests, Massive.com data source, requirements
 ```
 
 Each strategy folder is self-contained: its README explains the rules, results and how to run
-it, and its commands run from inside that folder. Changing one strategy never touches another.
+it, it lists its own Python requirements, and its commands run from inside that folder. Changing
+one strategy never touches another.
 
 ## Getting started
 
@@ -34,16 +36,17 @@ Use Python 3.11 or later.
 
 ```sh
 git clone https://github.com/Alan-Cao-ShengJin/Shoggoth-Capital.git
-cd Shoggoth-Capital
+cd Shoggoth-Capital/strategies/<name>
 python -m pip install -r requirements.txt
 ```
 
-Then follow the README in the strategy's folder.
+Then follow the README in that folder.
 
 ## Adding a strategy
 
 1. Create `strategies/<name>/` with a README that states the rules, the results and their
-   limits, a Python package for the code, and `tests/` using synthetic data only.
+   limits, a `requirements.txt`, a Python package for the code, and `tests/` using synthetic
+   data only.
 2. Add the strategy to the table above.
 3. Add its test steps to `.github/workflows/tests.yml`.
 

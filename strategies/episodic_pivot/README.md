@@ -62,12 +62,13 @@ slightly better in 2025-26; it was also better in four of the five years.
 
 ## Run it
 
-Needs Python 3.11+ (standard library plus the repo's `requirements.txt`) and a Massive.com API
-key in `MASSIVE_API_KEY`: the environment, or a `.env` file in this folder or at the repo root
-(ignored by Git). Run from this folder:
+Needs Python 3.11+ (standard library plus timezone data from this folder's `requirements.txt`)
+and a Massive.com API key in `MASSIVE_API_KEY`: the environment, or a `.env` file in this folder
+or at the repo root (ignored by Git). Run from this folder:
 
 ```sh
 cd strategies/episodic_pivot
+python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python -m episodic_pivot --start 2024-11-01 --end 2025-10-31 --output output/ep_2025.json
 python -m episodic_pivot --start 2024-11-01 --end 2025-10-31 --trail 10 --regime
