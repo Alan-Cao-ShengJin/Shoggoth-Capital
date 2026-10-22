@@ -2,8 +2,8 @@
 from dataclasses import replace
 import unittest
 
-from strategies.episodic_pivot.backtest import run
-from strategies.episodic_pivot.rules import Position, Settings, entry_signal, position_size
+from episodic_pivot.backtest import run
+from episodic_pivot.rules import Position, Settings, entry_signal, position_size
 
 S = Settings(min_market_cap=0)
 

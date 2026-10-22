@@ -62,26 +62,28 @@ slightly better in 2025-26; it was also better in four of the five years.
 
 ## Run it
 
-Needs Python 3.11+ (standard library only) and a Massive.com API key in `MASSIVE_API_KEY`
-(environment or `.env` at the repo root; both are ignored by Git).
+Needs Python 3.11+ (standard library plus the repo's `requirements.txt`) and a Massive.com API
+key in `MASSIVE_API_KEY`: the environment, or a `.env` file in this folder or at the repo root
+(ignored by Git). Run from this folder:
 
 ```sh
-python -m strategies.episodic_pivot --start 2024-11-01 --end 2025-10-31 --output output/ep_2025.json
-python -m strategies.episodic_pivot --start 2024-11-01 --end 2025-10-31 --trail 10 --regime
+cd strategies/episodic_pivot
+python -m unittest discover -s tests -v
+python -m episodic_pivot --start 2024-11-01 --end 2025-10-31 --output output/ep_2025.json
+python -m episodic_pivot --start 2024-11-01 --end 2025-10-31 --trail 10 --regime
 ```
 
-Downloads are cached in `data/massive_cache` (ignored by Git), so reruns are fast. The first run
-of a year downloads that year's gappers and can take 30-60 minutes. The output JSON has the
-summary, the daily equity curve, every trade with its fills, and why each gapper was skipped.
-
-Tests use synthetic data only: `python -m unittest discover -s tests -v`.
+The tests use synthetic data only and need no key. Downloads are cached in `data/massive_cache`
+(ignored by Git), so reruns are fast. The first run of a year downloads that year's gappers and
+can take 30-60 minutes. The output JSON has the summary, the daily equity curve, every trade with
+its fills, and why each gapper was skipped.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `rules.py` | `Settings` (every parameter, with defaults) and the entry, sizing and position rules |
-| `backtest.py` | Day-by-day portfolio simulation over any data source |
-| `massive.py` | Massive.com data source with a local cache |
-| `__main__.py` | Command line |
-| `../../tests/test_episodic_pivot.py` | Synthetic-data tests |
+| `episodic_pivot/rules.py` | `Settings` (every parameter, with defaults) and the entry, sizing and position rules |
+| `episodic_pivot/backtest.py` | Day-by-day portfolio simulation over any data source |
+| `episodic_pivot/massive.py` | Massive.com data source with a local cache |
+| `episodic_pivot/__main__.py` | Command line |
+| `tests/test_episodic_pivot.py` | Synthetic-data tests |

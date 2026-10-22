@@ -1,4 +1,4 @@
-name: core strategy tests
+name: strategy tests
 on:
   push:
   pull_request:
@@ -17,6 +17,20 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install -r requirements.txt
-      - run: python -m unittest discover -s tests -v
-      - run: python run_local.py --demo --output output/demo.json
-      - run: python -m compileall -q stock_strategy examples run_local.py
+
+      - name: MVE tests
+        working-directory: strategies/mve
+        run: python -m unittest discover -s tests -v
+      - name: MVE synthetic demo
+        working-directory: strategies/mve
+        run: python run_local.py --demo --output output/demo.json
+      - name: MVE compile check
+        working-directory: strategies/mve
+        run: python -m compileall -q stock_strategy examples run_local.py
+
+      - name: Episodic Pivot tests
+        working-directory: strategies/episodic_pivot
+        run: python -m unittest discover -s tests -v
+      - name: Episodic Pivot compile check
+        working-directory: strategies/episodic_pivot
+        run: python -m compileall -q episodic_pivot

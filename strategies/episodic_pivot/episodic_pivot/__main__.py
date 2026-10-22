@@ -1,6 +1,7 @@
 """Backtest the Episodic Pivot strategy with Massive.com data.
 
-python -m strategies.episodic_pivot --start 2024-11-01 --end 2025-10-31 --output output/ep_2025.json
+Run from strategies/episodic_pivot:
+python -m episodic_pivot --start 2024-11-01 --end 2025-10-31 --output output/ep_2025.json
 """
 from dataclasses import asdict, replace
 from pathlib import Path

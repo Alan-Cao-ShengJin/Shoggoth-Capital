@@ -1,8 +1,9 @@
 """Massive.com (formerly Polygon.io) data source for the EP backtest.
 
-Needs MASSIVE_API_KEY in the environment or in a `.env` file at the repo root (both ignored by
-Git). Every response is cached as JSON under the cache directory (default `data/massive_cache`,
-also ignored), so reruns don't download again. Uses only the standard library.
+Needs MASSIVE_API_KEY in the environment or in a `.env` file in this strategy's folder or at the
+repo root (ignored by Git). Every response is cached as JSON under the cache directory (default
+`data/massive_cache` in this strategy's folder, also ignored), so reruns don't download again.
+Uses only the standard library.
 """
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -16,17 +17,18 @@ import re
 import time
 
 ET = ZoneInfo("America/New_York")
-ROOT = Path(__file__).resolve().parents[2]
+STRATEGY_DIR = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def api_key():
     key = os.environ.get("MASSIVE_API_KEY")
-    env = ROOT / ".env"
-    if not key and env.exists():
-        m = re.search(r"^\s*MASSIVE_API_KEY\s*=\s*[\"']?([^\"'\s]+)", env.read_text(encoding="utf-8"), re.M)
-        key = m and m.group(1)
+    for env in (STRATEGY_DIR / ".env", REPO_ROOT / ".env"):
+        if not key and env.exists():
+            m = re.search(r"^\s*MASSIVE_API_KEY\s*=\s*[\"']?([^\"'\s]+)", env.read_text(encoding="utf-8"), re.M)
+            key = m and m.group(1)
     if not key:
-        raise SystemExit("Set MASSIVE_API_KEY in the environment or in .env at the repo root.")
+        raise SystemExit("Set MASSIVE_API_KEY in the environment or in .env (this folder or the repo root).")
     return key
 
 
@@ -42,7 +44,7 @@ def et(ms):
 class MassiveSource:
     def __init__(self, start, end, cache_dir=None):
         self.start, self.end = start, end
-        self.cache = Path(cache_dir) if cache_dir else ROOT / "data" / "massive_cache"
+        self.cache = Path(cache_dir) if cache_dir else STRATEGY_DIR / "data" / "massive_cache"
         self.cache.mkdir(parents=True, exist_ok=True)
         self.key = None
         self._grouped, self._universe = {}, {}
