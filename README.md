@@ -4,6 +4,17 @@ The core of Alan's current stock strategy, packaged for local testing with Tim.
 It combines a quarterly momentum watchlist, confirmed four-hour absorption
 signals, portfolio sizing/risk checks and an SGOV cash sleeve.
 
+## Strategies in this repo
+
+Each strategy is self-contained; adding one does not change another.
+
+| Strategy | Folder | Status |
+|---|---|---|
+| MVE: Momentum Volume Efficiency (this page) | `stock_strategy/` | Current deployed core |
+| Episodic Pivot (EP) | [`strategies/episodic_pivot/`](strategies/episodic_pivot/README.md) | Research: 5-year backtest, paper trading next |
+
+New strategies go in their own folder under `strategies/`, with tests in `tests/`.
+
 ## Try it
 
 Use **Python 3.11 or later**. The only dependency is timezone data; the strategy
