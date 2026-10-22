@@ -1,6 +1,6 @@
 # MVE — Momentum Volume Efficiency
 
-The core of Alan's current stock strategy, packaged for local testing with Tim.
+The core of the current stock strategy, packaged for local testing.
 It combines a quarterly momentum watchlist, confirmed four-hour absorption
 signals, portfolio sizing/risk checks and an SGOV cash sleeve.
 
@@ -150,7 +150,7 @@ deliberately if adopting a new shared baseline.
 
 The six copied core files and two extracted functions retain the current
 deployed stock rules. Only line endings are normalized; there is no parameter
-retuning. Source checksums identify the baseline shared by Alan and Tim.
+retuning. Source checksums identify the shared baseline.
 
 The local simulation uses supplied review prices, fractional quantities and
 **zero fees/slippage**. It sizes from current total account equity, including
