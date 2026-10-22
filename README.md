@@ -1,8 +1,8 @@
 # Shoggoth Capital
 
-Alan's systematic stock-trading strategies, kept in one place and shared with Tim for review and
-local testing. Each strategy has its own folder with its rules written out in plain language, the
-code that implements them, tests, and its research results.
+Systematic stock-trading strategies, kept in one place for review and local testing. Each strategy
+has its own folder with its rules written out in plain language, the code that implements them,
+tests, and its research results.
 
 Everything here runs locally on historical or synthetic data. Nothing connects to a broker or
 places orders. This is research, not financial advice.
