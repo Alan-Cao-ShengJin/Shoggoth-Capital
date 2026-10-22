@@ -1,14 +1,27 @@
+# Repo-wide rules; they apply inside every strategy folder.
+
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
 .venv/
 venv/
+
+# Credentials: never commit keys
 .env
 .env.*
 *.pem
 *.key
+
+# Downloaded data and generated results
 data/
 output/
 reports/
+
+# Editors and operating systems
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db

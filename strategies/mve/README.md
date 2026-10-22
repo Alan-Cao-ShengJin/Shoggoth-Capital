@@ -7,14 +7,12 @@ signals, portfolio sizing/risk checks and an SGOV cash sleeve.
 ## Try it
 
 Use **Python 3.11 or later**. The only dependency is timezone data; the strategy
-calculations use the Python standard library. Commands after `cd strategies/mve`
-run from this folder.
+calculations use the Python standard library. All commands run from this folder.
 
 ```sh
 git clone https://github.com/Alan-Cao-ShengJin/Shoggoth-Capital.git
-cd Shoggoth-Capital
+cd Shoggoth-Capital/strategies/mve
 python -m pip install -r requirements.txt
-cd strategies/mve
 python -m unittest discover -s tests -v
 python run_local.py --demo --output output/demo.json
 ```

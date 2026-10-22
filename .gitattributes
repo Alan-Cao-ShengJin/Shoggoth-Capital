@@ -1,1 +1,10 @@
+# Repo-wide rules. Text files are stored and checked out with LF line endings on every platform,
+# which keeps MVE's source checksums identical on Windows and Linux.
 * text=auto eol=lf
+
+# Binary files: never convert or diff.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xlsx binary
+*.parquet binary
