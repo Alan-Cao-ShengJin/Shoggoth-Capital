@@ -25,7 +25,11 @@ class Settings:
     partial_day: int = 3             # sell part after 3-5 days (stated); in profit only
     partial_fraction: float = 0.5    # 1/3 to 1/2 (stated)
     trail_sma: int = 20              # exit on the first daily close below this SMA (10 or 20 stated)
-    regime_filter: bool = False      # QQQ 10-day SMA above 20-day, both rising (stated; off by default)
+    market_filter: str = "qqq_iwm"   # new entries only when the market is in an uptrend:
+                                     #   "qqq_iwm" QQQ and IWM above a rising EMA (Martin Luk; default),
+                                     #   "qqq_sma" QQQ 10-day SMA above 20-day, both rising (Qullamaggie),
+                                     #   "off"
+    market_ema: int = 21             # EMA length for "qqq_iwm" (15 and 30 tested as well)
     commission_per_share: float = 0.005
     slippage: float = 0.02
 
@@ -53,14 +57,45 @@ def daily_stats(rows, i, lookback=20):
     return adr, adv
 
 
-def regime_ok(qqq_rows, i):
-    """Market filter as of the prior close: QQQ 10-day SMA above the 20-day and both rising."""
+def ema(rows, i, n):
+    """Exponential moving average of closes at row i, seeded with the SMA of the first n closes."""
+    if i + 1 < n:
+        return None
+    k = 2 / (n + 1)
+    e = sma(rows, n - 1, n)
+    for j in range(n, i + 1):
+        e = rows[j]["c"] * k + e * (1 - k)
+    return e
+
+
+def above_rising_ema(rows, i, n):
+    """As of the prior close (row i - 1): close above the n-day EMA, and the EMA higher than a day before."""
+    if i is None or i < n + 1:
+        return False
+    p = i - 1
+    e = ema(rows, p, n)
+    return rows[p]["c"] > e and e > ema(rows, p - 1, n)
+
+
+def qqq_sma_ok(qqq_rows, i):
+    """As of the prior close: QQQ 10-day SMA above the 20-day and both rising."""
     if i is None or i < 22:
         return False
     p = i - 1
     s10, s20 = sma(qqq_rows, p, 10), sma(qqq_rows, p, 20)
     s10b, s20b = sma(qqq_rows, p - 1, 10), sma(qqq_rows, p - 1, 20)
     return s10 > s20 and s10 > s10b and s20 > s20b
+
+
+def market_ok(settings, qqq, iwm):
+    """Whether new entries are allowed today. `qqq` and `iwm` are (daily rows, index of today) pairs."""
+    if settings.market_filter == "off":
+        return True
+    if settings.market_filter == "qqq_sma":
+        return qqq_sma_ok(*qqq)
+    if settings.market_filter == "qqq_iwm":
+        return above_rising_ema(*qqq, settings.market_ema) and above_rising_ema(*iwm, settings.market_ema)
+    raise ValueError(f"unknown market_filter {settings.market_filter!r}")
 
 
 def entry_signal(settings, bars, prev_close, adr, adv):

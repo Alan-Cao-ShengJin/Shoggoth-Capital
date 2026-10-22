@@ -12,7 +12,7 @@ places orders. This is research, not financial advice.
 | Strategy | What it does | Status |
 |---|---|---|
 | [MVE: Momentum Volume Efficiency](strategies/mve/README.md) | Builds a quarterly momentum watchlist, buys and trims on confirmed four-hour absorption signals, and manages a diversified, risk-capped portfolio with an SGOV cash sleeve. | Current deployed core |
-| [Episodic Pivot (EP)](strategies/episodic_pivot/README.md) | Buys stocks that gap up 10%+ on big news on the opening-range-high break, and holds the winners for days to weeks. | Research: five-year backtest, paper trading next |
+| [Episodic Pivot (EP)](strategies/episodic_pivot/README.md) | Buys stocks that gap up 10%+ on big news on the opening-range-high break, only while QQQ and IWM are in uptrends, and holds the winners for days to weeks. | Research: five-year backtest, paper trading next |
 
 ## Layout
 
