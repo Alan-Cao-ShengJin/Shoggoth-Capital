@@ -3,9 +3,9 @@ from dataclasses import replace
 import unittest
 
 from episodic_pivot.backtest import run
-from episodic_pivot.rules import Position, Settings, entry_signal, position_size
+from episodic_pivot.rules import Position, Settings, above_rising_ema, entry_signal, position_size
 
-S = Settings(min_market_cap=0)
+S = Settings(min_market_cap=0, market_filter="off")
 
 
 def bar(minute, o, h, l, c, v):
@@ -85,11 +85,37 @@ class PositionTests(unittest.TestCase):
         self.assertAlmostEqual(p.result("2026-01-06")["pnl"], round(100 * (10.6 - S.slippage) - 100 * 11.0 - 200 * S.commission_per_share, 2))
 
 
-class SyntheticSource:
-    """Six tickers gap on the same day; each then trends up for the rest of the period."""
+def closes(*cs):
+    return [{"c": c} for c in cs]
 
-    def __init__(self, tickers=("AAA", "BBB", "CCC", "DDD", "EEE", "FFF")):
+
+class MarketFilterTests(unittest.TestCase):
+    def test_needs_a_close_above_a_rising_average(self):
+        rising = closes(*range(1, 40))
+        self.assertTrue(above_rising_ema(rising, len(rising), 21))
+
+    def test_uses_only_the_prior_close(self):
+        rows = closes(*range(1, 40)) + [{"c": 0.5}]       # today's collapse is not known before the open
+        self.assertTrue(above_rising_ema(rows, len(rows) - 1, 21))
+
+    def test_off_when_below_the_average_or_falling(self):
+        self.assertFalse(above_rising_ema(closes(*range(40, 1, -1)), 39, 21))
+        self.assertFalse(above_rising_ema(closes(*[10] * 40), 40, 21))  # flat: not rising
+
+    def test_off_without_enough_history(self):
+        self.assertFalse(above_rising_ema(closes(*range(1, 10)), 9, 21))
+        self.assertFalse(above_rising_ema(closes(*range(1, 40)), None, 21))
+
+
+class SyntheticSource:
+    """Six tickers gap on the same day; each then trends up for the rest of the period.
+
+    QQQ and IWM are flat before the period, or rising if `market_rising`.
+    """
+
+    def __init__(self, tickers=("AAA", "BBB", "CCC", "DDD", "EEE", "FFF"), market_rising=False):
         self.tickers = tickers
+        self.market_rising = market_rising
         self.days = [f"2026-02-{d:02d}" for d in range(2, 28) if d not in (7, 8, 14, 15, 21, 22)]
         self.history = [f"2026-01-{d:02d}" for d in range(2, 31) if d not in (3, 4, 10, 11, 17, 18, 24, 25)]
 
@@ -107,6 +133,10 @@ class SyntheticSource:
         return 5e9
 
     def daily(self, ticker):
+        if ticker in ("QQQ", "IWM"):
+            dates = self.history + self.days
+            return [{"date": d, "o": 100, "h": 101, "l": 99, "c": 100 + (k if self.market_rising else 0), "v": 1}
+                    for k, d in enumerate(dates)]
         rows = [{"date": d, "o": 9.5, "h": 9.9, "l": 9.2, "c": 9.5, "v": 1_000_000} for d in self.history]
         price = 11.3
         for d in self.days:
@@ -134,6 +164,21 @@ class BacktestTests(unittest.TestCase):
         result = run(src, src.days[0], src.days[-1], replace(S, min_market_cap=1e10))
         self.assertEqual(result["summary"]["trades"], 0)
         self.assertTrue(all(s.endswith("below market cap floor") for s in result["days"][0]["no_entry"]))
+
+    def test_market_filter_blocks_entries_in_a_flat_market(self):
+        src = SyntheticSource()
+        result = run(src, src.days[0], src.days[-1], replace(S, market_filter="qqq_iwm", market_ema=10))
+        self.assertEqual(result["summary"]["trades"], 0)
+        self.assertFalse(result["days"][0]["market_ok"])
+
+    def test_market_filter_allows_entries_in_an_uptrend(self):
+        src = SyntheticSource(market_rising=True)
+        result = run(src, src.days[0], src.days[-1], replace(S, market_filter="qqq_iwm", market_ema=10))
+        self.assertTrue(result["days"][0]["market_ok"])
+        self.assertEqual(result["summary"]["trades"], 4)
+
+    def test_the_default_is_the_qqq_iwm_filter(self):
+        self.assertEqual((Settings().market_filter, Settings().market_ema), ("qqq_iwm", 21))
 
 
 if __name__ == "__main__":

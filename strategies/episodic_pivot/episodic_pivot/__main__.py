@@ -23,11 +23,15 @@ def main(argv=None):
     parser.add_argument("--cache-dir", help="Where downloaded Massive responses are kept (default data/massive_cache)")
     parser.add_argument("--trail", type=int, default=defaults.trail_sma, help="Daily SMA for the trailing exit (10 or 20)")
     parser.add_argument("--min-cap", type=float, default=defaults.min_market_cap, help="Market cap floor in dollars")
-    parser.add_argument("--regime", action="store_true", help="Only enter when QQQ's 10-day SMA is above its 20-day and both rise")
+    parser.add_argument("--market-filter", choices=["qqq_iwm", "qqq_sma", "off"], default=defaults.market_filter,
+                        help="When new entries are allowed: QQQ and IWM above a rising EMA (default), "
+                             "QQQ 10-day SMA above 20-day and both rising, or always")
+    parser.add_argument("--market-ema", type=int, default=defaults.market_ema, help="EMA length for qqq_iwm")
     parser.add_argument("--quiet", action="store_true", help="Don't print a line per day")
     args = parser.parse_args(argv)
 
-    settings = replace(defaults, trail_sma=args.trail, min_market_cap=args.min_cap, regime_filter=args.regime)
+    settings = replace(defaults, trail_sma=args.trail, min_market_cap=args.min_cap,
+                       market_filter=args.market_filter, market_ema=args.market_ema)
     source = MassiveSource(args.start, args.end, args.cache_dir)
     log = None if args.quiet else (lambda line: print(line, file=sys.stderr))
     result = run(source, args.start, args.end, settings, log)

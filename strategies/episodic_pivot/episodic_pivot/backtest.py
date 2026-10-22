@@ -10,7 +10,7 @@ A data source provides (see massive.py and the synthetic one in tests):
 """
 from math import sqrt
 
-from .rules import Position, daily_stats, entry_signal, position_size, regime_ok, sma
+from .rules import Position, daily_stats, entry_signal, market_ok, position_size, sma
 
 
 def run(source, start, end, settings, log=None):
@@ -42,9 +42,10 @@ def run(source, start, end, settings, log=None):
 
         # 2) New entries.
         candidates = source.gappers(day, prev_day, settings)
-        market_ok = not settings.regime_filter or regime_ok(rows("QQQ")[0], rows("QQQ")[1].get(day))
+        allowed = settings.market_filter == "off" or market_ok(
+            settings, *((rows(t)[0], rows(t)[1].get(day)) for t in ("QQQ", "IWM")))
         outcomes = []
-        for ticker, prev_close in (candidates if market_ok else []):
+        for ticker, prev_close in (candidates if allowed else []):
             outcomes.append((ticker, *_signal(source, settings, rows, ticker, day, prev_close)))
         signals = sorted((o for o in outcomes if o[1] == "signal"), key=lambda o: (o[2]["bar"]["min"], -o[2]["vol_ratio"]))
         entries, skipped = [], [f"{t}: {why}" for t, kind, why in outcomes if kind == "skip"]
@@ -80,7 +81,7 @@ def run(source, start, end, settings, log=None):
             if i is not None:
                 unreal += p.qty * r[i]["c"] + p.proceeds - p.cost
         curve.append({"date": day, "equity": round(realized + unreal, 2), "open": len(open_)})
-        day_log.append({"date": day, "candidates": len(candidates), "entries": entries, "no_entry": skipped})
+        day_log.append({"date": day, "candidates": len(candidates), "market_ok": allowed, "entries": entries, "no_entry": skipped})
         if log:
             log(f"{day}  {len(candidates):3d} gappers  +{len(entries)} entries  open {len(open_)}  equity {realized + unreal:.0f}")
         prev_day = day
