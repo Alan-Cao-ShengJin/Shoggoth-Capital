@@ -1,0 +1,10 @@
+[
+  {
+    "ticker": "RETA",
+    "effective_date": "2023-09-26",
+    "last_trading_date": "2023-09-25",
+    "cash_per_share": 172.5,
+    "recognition": "Share cancellation and cash entitlement before the market open; payment timing is not simulated.",
+    "source": "https://www.nasdaqtrader.com/TraderNews.aspx?id=ECA2023-540"
+  }
+]

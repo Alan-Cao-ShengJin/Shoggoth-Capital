@@ -2,7 +2,9 @@
 
 Buy a stock on the day it gaps up sharply on big news, usually earnings, and hold the winners for
 days to weeks; only take new trades while the broad market is in an uptrend. The rules follow the
-method Qullamaggie describes publicly; this repo is not affiliated with him. Status: **research**. Backtested over five years; paper trading is the next step.
+method Qullamaggie describes publicly; this repo is not affiliated with him. Status: **research**.
+Execution and accounting defects have been corrected. Paired historical replays of the previous
+and corrected code are reported below, with their coverage and modeling limits.
 
 ## Rules
 
@@ -23,7 +25,72 @@ and selling exactly half on day 3. The market switch is Martin Luk's rule (2025 
 Championship winner); Qullamaggie's own filter (QQQ 10-day SMA above the 20-day, both rising) did
 not help in our tests and remains available as an option.
 
-## Backtest results
+## What was wrong and what changed
+
+| Defect | Previous behavior | Correction |
+|---|---|---|
+| Future exits released position slots | A position sold at the close, or stopped later in the day, could free a slot for an earlier morning entry. Four allowed positions could therefore overlap with a fifth. | Process opening gaps, entries and intraday stops in time order. Reserve a slot throughout a candle; apply close-based exits after the entry window. |
+| Entry stops used the candle's eventual low | The breakout candle's later low could change sizing or cause a losing trade to be skipped. That candle was then omitted from stop execution. | Use completed candles and the current open for the initial stop. Include the entry candle in stop checks, assuming an adverse entry-then-stop ordering when OHLC cannot establish the order. |
+| Failed data responses became empty observations | HTTP errors were cached as empty results and could silently remove a trading session. | Raise on HTTP/API errors, reject previously cached error responses, and preserve successful empty holiday responses. |
+| Final liquidation understated costs | Terminal exits omitted slippage, and the last curve point preceded the exit commission. | Charge the same slippage and commission as other sales, then record the final curve point so it equals total trade P&L. |
+
+The historical replay also encountered RETA's cash acquisition. An explicitly verified cash
+entitlement now cancels those shares on the effective date; an unexplained missing held price
+still stops the replay. This additional accounting change is measured separately below.
+
+Synthetic regressions cover these cases, including carried-position stops, same-candle capacity,
+opening gap exits, failed and cached API responses, terminal costs, and verified cash entitlements.
+
+## Corrected historical replay — October 24, 2026
+
+The previous implementation at `c2becc1` and the corrected implementation were replayed on the
+same cached Massive observations with the default QQQ/IWM EMA21 market filter. Each period starts
+flat with a fixed $25,000 sizing base, $0.005/share commission and $0.02/share adverse slippage.
+These are returns over each period, with no compounding or parameter tuning.
+
+| Period | Previous profit | Corrected profit | Corrected return | Corrected PF | Trades, previous → corrected |
+|---|---:|---:|---:|---:|---:|
+| 2021-22, shortened | $319.78 | $337.42 | +1.35% | 1.07 | 32 → 31 |
+| 2022-23 | $5,530.33 | $4,559.22 | +18.24% | 1.75 | 44 → 46 |
+| 2023-24 | $3,116.47 | $2,042.93 | +8.17% | 1.35 | 40 → 41 |
+| 2024-25 | $8,369.60 | $8,076.35 | +32.31% | 2.24 | 54 → 53 |
+| 2025-26, through October 23 | $2,023.06 | $1,433.16 | +5.73% | 1.25 | 43 → 44 |
+| **Combined independent periods** | **$19,359.24** | **$16,449.08** | | **1.57** | **213 → 215** |
+
+The corrected combined profit is $2,910.16 lower (about 15%). Pooled profit factor falls from
+1.71 to 1.57, win rate from 36.15% to 33.02%, and the trade-profit t-statistic from 2.26 to 1.92.
+Every recorded period remains profitable; the largest corrected within-period drawdown is 19.0%.
+The combined profit is a sum of independently reset accounts, not a compounded account return.
+
+The shortened first period is November 24, 2021 through October 31, 2022: the available daily
+history begins October 25, 2021 and supplies 22 completed warm-up sessions for the initial market filter. The
+2022-23 benchmark histories have 257 prior sessions; later periods have 289-290. The earliest
+period is not a full reproduction of November 1 onward. The latest period is November 3, 2025
+through October 23, 2026; the middle periods run November 1 through October 31. Fresh provider
+snapshots closely reproduce the earlier reported profits and trade counts, but are not the
+research author's original cache.
+
+The real-data replay also exposed RETA's completed cash acquisition. Its shares were canceled
+before the September 26, 2023 market open for a $172.50/share cash entitlement, after its last
+trading day on September 25. The explicitly catalogued event replaces the missing trading quote;
+it is not a market sale and incurs no execution costs. [Nasdaq's confirmed terms](https://www.nasdaqtrader.com/TraderNews.aspx?id=ECA2023-540).
+Payment timing is not simulated. A separate old-code counterfactual with only this event changed
+adds $2.61; the four execution/accounting corrections account for the remaining -$2,912.77.
+
+The committed [replay summary](research/execution_corrections_2026-10-24.json) records parameters,
+per-period results, the cash-event counterfactual, and input/source fingerprints without credentials,
+local paths or raw vendor responses. Each paired replay verifies final equity against total trade
+profit and the four-position limit.
+Local audit outputs under the repository root's `output/ep_corrections/` include both complete
+replays, per-year comparisons, a cash-event counterfactual, input-response hashes, source hashes,
+and a chart. Downloaded data use bounded compressed caches; credentials and downloaded responses
+remain outside the committed summary.
+
+## Earlier published research — reference only
+
+**The figures below predate the corrections. Use the paired results above for the corrected
+default implementation.** The earlier comparisons with other market filters and cost settings
+have not been rerun here.
 
 Data: Massive.com (formerly Polygon.io), consolidated US prices. Fixed $25,000 account, no
 compounding, $0.005/share commission and $0.02/share slippage on every fill. Years run November
@@ -65,11 +132,32 @@ exits, sizing) are listed in the research notes behind this strategy.
   real test.
 - It still depends on the market: the switch keeps it out of weak markets, so it trades about 43
   times a year instead of 80, and the bull years earn less than without it.
-- The statistics are promising but not conclusive (t-stat 2.26 on 213 trades).
+- The corrected pooled statistics are not conclusive (t-stat 1.92 on 215 trades), and no unseen
+  validation period remains.
 - No earnings data: "strong earnings" is approximated by the market-cap floor.
-- Fills use 5-minute bars; real fills on fast gap-ups can be worse. No borrow, margin, dividends
-  or corporate-action ledger.
+- Fills use 5-minute bars; real fills on fast gap-ups can be worse. No borrow, margin or dividend
+  ledger. Only explicitly catalogued cash-merger entitlements are recognized; other corporate
+  actions and actual payment timing remain unmodeled.
 - Before using real money, paper trade it and compare the live record with these numbers.
+
+## Execution and accounting
+
+- Positions are processed in time order. Opening gap stops can free capacity before entries;
+  intraday stops free capacity after their five-minute candle, and close-based exits only at
+  the close. Same-candle entries cannot use slots freed by that candle's eventual low.
+- The initial stop uses completed regular-session candles and the entry candle's opening price.
+  Its eventual low cannot change eligibility or sizing. If the entry candle also touches the
+  stop, assume the stop follows the entry; five-minute OHLC data cannot establish the true order.
+- Held positions whose daily range crosses a stop require that day's intraday bars to place the
+  exit in time. Older caches may need these additional downloads. Missing stop data, HTTP/API
+  errors and cached error responses stop the run instead of silently dropping observations.
+- A verified pre-market cash merger cancels shares and records their cash entitlement before new
+  entries. Missing held prices without an explicitly catalogued event still stop the run.
+- Positions still held at the end are liquidated with adverse slippage and commission. The final
+  equity-curve point includes these costs and equals the sum of reported trade profits. Curve
+  `equity` values are cumulative P&L from zero; add `settings.account` for account value.
+- Close-based sales still use the reported daily close as an execution approximation; this is
+  not an auction-order or tick-by-tick simulation.
 
 ## Run it
 
@@ -100,5 +188,6 @@ its fills, and why each gapper was skipped.
 | `episodic_pivot/rules.py` | `Settings` (every parameter, with defaults) and the entry, sizing and position rules |
 | `episodic_pivot/backtest.py` | Day-by-day portfolio simulation over any data source |
 | `episodic_pivot/massive.py` | Massive.com data source with a local cache |
+| `episodic_pivot/cash_mergers.json` | Explicitly verified pre-market cash-merger events and source links |
 | `episodic_pivot/__main__.py` | Command line |
-| `tests/test_episodic_pivot.py` | Synthetic-data tests |
+| `tests/` | Synthetic rule tests and regressions for timing, data failures and accounting |

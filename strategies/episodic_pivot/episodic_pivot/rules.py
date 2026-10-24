@@ -4,7 +4,7 @@ Bars are dicts with o, h, l, c, v and, for 5-minute bars, `min` = minutes after 
 New York time of the bar's start. Daily rows are dicts with date, o, h, l, c, v.
 """
 from dataclasses import dataclass
-from math import floor
+from math import floor, isfinite
 
 REGULAR_OPEN = 9 * 60 + 30
 
@@ -103,7 +103,9 @@ def entry_signal(settings, bars, prev_close, adr, adv):
 
     Returns ("signal", dict) or ("skip", reason). The entry is a stop order at the opening-range
     high (first regular 5-minute bar), live only once premarket plus regular volume so far reaches
-    `volume_multiple` x the 20-day average. Only bars up to the fill are used.
+    `volume_multiple` x the 20-day average. The initial stop uses completed candles and the
+    entry candle's opening price, never its eventual low. An ambiguous entry-candle stop is
+    assumed to occur after entry, conservatively.
     """
     pm = [b for b in bars if b["min"] < REGULAR_OPEN]
     reg = [b for b in bars if b["min"] >= REGULAR_OPEN]
@@ -118,12 +120,12 @@ def entry_signal(settings, bars, prev_close, adr, adv):
             break
         if vol >= settings.volume_multiple * adv and b["h"] > orh:
             fill = max(b["o"], orh) + settings.slippage
-            stop = min(lod, b["l"])
+            stop = min(lod, b["o"])
             if (fill - stop) / fill > settings.adr_multiple * adr:
                 return "skip", "stop wider than ADR"
             return "signal", {"bar": b, "fill": fill, "stop": stop, "orh": orh, "adr": adr,
                               "vol_ratio": vol / adv, "gap_pct": (reg[0]["o"] / prev_close - 1) * 100,
-                              "rest": reg[k + 1:]}
+                              "rest": reg[k:]}
         vol += b["v"]
         lod = min(lod, b["l"])
     if vol < settings.volume_multiple * adv:
@@ -163,24 +165,38 @@ class Position:
         self.fills.append(f"{n}@{px:.2f} {why} {date}")
         self.proceeds += n * px - n * self.settings.commission_per_share
 
+    def cash_merger(self, price, day):
+        """Value canceled shares at their verified cash entitlement, without trade costs."""
+        if not isfinite(price) or price <= 0:
+            raise ValueError("Invalid cash merger entitlement")
+        self.fills.append(f"{self.qty}@{price:.2f} cash-merger {day}")
+        self.proceeds += self.qty * price
+        self.qty = 0
+
     def entry_day(self, rest_bars, day):
-        """The rest of the entry day on 5-minute bars: only the day's-low stop applies."""
-        for b in rest_bars:
-            if b["o"] <= self.stop or b["l"] <= self.stop:
-                self.sell((b["o"] if b["o"] <= self.stop else self.stop) - self.settings.slippage, self.qty, "stop", day)
+        """Include the entry candle; its opening price occurred before the purchase."""
+        for i, b in enumerate(rest_bars):
+            if self.stop_bar(b, day, check_open=i != 0):
                 return
+
+    def stop_bar(self, bar, day, *, check_open=True):
+        """Execute a stop on one observed bar, with adverse gap pricing when applicable."""
+        px = bar["o"] if check_open and bar["o"] <= self.stop else self.stop
+        if (check_open and bar["o"] <= self.stop) or bar["l"] <= self.stop:
+            why = "breakeven" if self.partial_done else "stop"
+            self.sell(px - self.settings.slippage, self.qty, why, day)
+        return self.qty <= 0
 
     def daily(self, bar, trail_value, day):
         """Manage one later session on its daily bar. Returns True when the position is closed."""
-        s = self.settings
         self.days_held += 1
-        why = "breakeven" if self.partial_done else "stop"
-        if bar["o"] <= self.stop:
-            self.sell(bar["o"] - s.slippage, self.qty, why, day)
+        if self.stop_bar(bar, day):
             return True
-        if bar["l"] <= self.stop:
-            self.sell(self.stop - s.slippage, self.qty, why, day)
-            return True
+        return self.close_day(bar, trail_value, day)
+
+    def close_day(self, bar, trail_value, day):
+        """Apply close-only rules after intraday stops, without revisiting earlier lows."""
+        s = self.settings
         if not self.partial_done and self.days_held >= s.partial_day and bar["c"] > self.entry:
             self.sell(bar["c"] - s.slippage, round_half_up(self.init_qty * s.partial_fraction), f"partial-d{self.days_held}", day)
             self.partial_done = True
