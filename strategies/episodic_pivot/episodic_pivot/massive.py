@@ -19,6 +19,8 @@ import time
 ET = ZoneInfo("America/New_York")
 STRATEGY_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
+CASH_MERGERS = {(event["ticker"], event["effective_date"]): event
+                for event in json.loads(Path(__file__).with_name("cash_mergers.json").read_text(encoding="utf-8"))}
 
 
 def api_key():
@@ -49,6 +51,10 @@ class MassiveSource:
         self.key = None
         self._grouped, self._universe = {}, {}
 
+    def cash_merger(self, ticker, day):
+        """Return only explicitly verified pre-market share-cancellation events."""
+        return CASH_MERGERS.get((ticker, day))
+
     def _cache_file(self, path):
         file = (self.cache / (re.sub(r"[^A-Za-z0-9._-]+", "_", path)[:200] + ".json")).resolve()
         # Cache names reach ~200 characters; Windows needs the extended-length prefix past 260.
@@ -57,7 +63,9 @@ class MassiveSource:
     def _api(self, path):
         file = self._cache_file(path)
         if file.exists():
-            return json.loads(file.read_text(encoding="utf-8"))
+            value = json.loads(file.read_text(encoding="utf-8"))
+            self._check_response(value, path, cached=True)
+            return value
         self.key = self.key or api_key()
         for attempt in range(5):
             try:
@@ -68,10 +76,19 @@ class MassiveSource:
                 if e.code == 429 or e.code >= 500:
                     time.sleep(2 ** attempt)
                     continue
-                value = {"results": None, "status": f"HTTP {e.code}"}
+                raise RuntimeError(f"Massive HTTP {e.code} for {path.split('?')[0]}; no data cached") from None
+            self._check_response(value, path)
             file.write_text(json.dumps(value), encoding="utf-8")
             return value
         raise RuntimeError(f"gave up on {path.split('?')[0]}")
+
+    @staticmethod
+    def _check_response(value, path, *, cached=False):
+        status = value.get("status") if isinstance(value, dict) else "INVALID RESPONSE"
+        if status not in (None, "OK", "DELAYED") or not isinstance(value, dict) or value.get("error"):
+            origin = "Cached Massive" if cached else "Massive"
+            action = "; remove the failed cache entry and retry" if cached else "; no data cached"
+            raise RuntimeError(f"{origin} response error {status} for {path.split('?')[0]}{action}")
 
     def _grouped_day(self, d):
         if d not in self._grouped:
